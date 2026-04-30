@@ -5,7 +5,6 @@
 #include <locale.h>
 
 // --- Constantes Globais ---
-#define TOTAL_TERRITORIOS 5
 #define MAX_NOME 30
 
 // --- Estrutura de Dados ---
@@ -16,49 +15,75 @@ typedef struct {
 } Territorio;
 
 // --- Protótipos das Funções ---
-Territorio* alocarMapa();
-void inicializarTerritorios(Territorio* mapa);
-void exibirMapa(const Territorio* mapa);
+Territorio* alocarMapa(int total);
+void inicializarTerritorios(Territorio* mapa, int total);
+void exibirMapa(const Territorio* mapa, int total);
 void exibirMissao(int missaoID);
-void simularAtaque(Territorio* origem, Territorio* destino);
+// Alterado para void atacar conforme requisito
+void atacar(Territorio* atacante, Territorio* defensor);
 void limparBufferEntrada();
 void liberarMemoria(Territorio* mapa);
 
 // --- Função Principal ---
 int main() {
     setlocale(LC_ALL, "Portuguese");
-    srand(time(NULL)); // Semente para números aleatórios
+    srand(time(NULL)); 
 
-    // 1. Setup
-    Territorio* mapa = alocarMapa();
+    int totalTerritorios;
+    printf("Quantos territórios deseja cadastrar no sistema? ");
+    scanf("%d", &totalTerritorios);
+    limparBufferEntrada();
+
+    // 1. Setup com Alocação Dinâmica baseada na escolha do usuário
+    Territorio* mapa = alocarMapa(totalTerritorios);
     if (mapa == NULL) {
         printf("Erro ao alocar memória!\n");
         return 1;
     }
-    inicializarTerritorios(mapa);
     
-    int missaoID = rand() % 2; // Sorteia missão 0 ou 1
+    inicializarTerritorios(mapa, totalTerritorios);
+    
+    int missaoID = rand() % 2; 
     int opcao;
 
     // 2. Game Loop
     do {
-        system("cls || clear"); // Limpa a tela conforme o SO
-        printf("=== WAR ESTRUTURADO ===\n");
+        system("cls || clear"); 
+        printf("=== WAR ESTRUTURADO - MK GÊNIO ===\n");
         exibirMissao(missaoID);
-        exibirMapa(mapa);
+        exibirMapa(mapa, totalTerritorios);
 
         printf("\n1. Atacar\n2. Verificar Vitoria\n0. Sair\nEscolha: ");
         scanf("%d", &opcao);
         limparBufferEntrada();
 
         switch(opcao) {
-            case 1:
-                // Exemplo simples de ataque entre território 0 e 1 para demonstração
-                simularAtaque(&mapa[0], &mapa[1]);
+            case 1: {
+                int idAtacante, idDefensor;
+                printf("\nDigite o ID do território ATACANTE (0 a %d): ", totalTerritorios - 1);
+                scanf("%d", &idAtacante);
+                printf("Digite o ID do território DEFENSOR (0 a %d): ", totalTerritorios - 1);
+                scanf("%d", &idDefensor);
+                limparBufferEntrada();
+
+                // Validação de segurança
+                if (idAtacante >= 0 && idAtacante < totalTerritorios && idDefensor >= 0 && idDefensor < totalTerritorios) {
+                    if (strcmp(mapa[idAtacante].cor, mapa[idDefensor].cor) == 0) {
+                        printf("\n[ERRO] Você não pode atacar seu próprio território!\n");
+                    } else if (mapa[idAtacante].tropas < 2) {
+                        printf("\n[ERRO] Tropas insuficientes para atacar (mínimo 2)!\n");
+                    } else {
+                        // REQUISITO: Uso de ponteiros para manipular os dados
+                        atacar(&mapa[idAtacante], &mapa[idDefensor]);
+                    }
+                } else {
+                    printf("\n[ERRO] IDs inválidos!\n");
+                }
                 break;
+            }
             case 2:
-                printf("\n[LOG] Analisando requisitos da missao...\n");
-                printf("Ainda ha batalhas pela frente!\n");
+                printf("\n[LOG] Analisando requisitos da missão...\n");
+                printf("Ainda há batalhas pela frente!\n");
                 break;
             case 0:
                 printf("Saindo...\n");
@@ -76,53 +101,62 @@ int main() {
 
 // --- Implementação das Funções ---
 
-// DOCUMENTAÇÃO: Aloca memória dinamicamente (Requisito Técnico)
-Territorio* alocarMapa() {
-    return (Territorio*) calloc(TOTAL_TERRITORIOS, sizeof(Territorio));
+// Agora recebe o tamanho informado pelo usuário
+Territorio* alocarMapa(int total) {
+    return (Territorio*) calloc(total, sizeof(Territorio));
 }
 
-// DOCUMENTAÇÃO: Inicializa os dados (Passagem por referência)
-void inicializarTerritorios(Territorio* mapa) {
-    char nomes[5][MAX_NOME] = {"Brasil", "Egito", "Russia", "China", "EUA"};
-    char cores[5][20] = {"Verde", "Amarelo", "Vermelho", "Azul", "Branco"};
-
-    for (int i = 0; i < TOTAL_TERRITORIOS; i++) {
-        strcpy(mapa[i].nome, nomes[i]);
-        strcpy(mapa[i].cor, cores[i]);
-        mapa[i].tropas = rand() % 10 + 2; // Começa com 2 a 11 tropas
+void inicializarTerritorios(Territorio* mapa, int total) {
+    // Nomes genéricos para suportar qualquer quantidade
+    for (int i = 0; i < total; i++) {
+        sprintf(mapa[i].nome, "Território %d", i + 1);
+        // Define duas cores básicas para permitir o ataque inicial
+        if (i % 2 == 0) strcpy(mapa[i].cor, "Verde");
+        else strcpy(mapa[i].cor, "Amarelo");
+        
+        mapa[i].tropas = rand() % 10 + 3; 
     }
 }
 
-// DOCUMENTAÇÃO: Uso de 'const' para apenas leitura
-void exibirMapa(const Territorio* mapa) {
-    printf("\n%-15s | %-10s | %-6s\n", "TERRITORIO", "COR", "TROPAS");
-    printf("------------------------------------------\n");
-    for (int i = 0; i < TOTAL_TERRITORIOS; i++) {
-        printf("%-15s | %-10s | %-6d\n", mapa[i].nome, mapa[i].cor, mapa[i].tropas);
+void exibirMapa(const Territorio* mapa, int total) {
+    printf("\nID | %-15s | %-10s | %-6s\n", "TERRITÓRIO", "COR", "TROPAS");
+    printf("----------------------------------------------\n");
+    for (int i = 0; i < total; i++) {
+        printf("%d  | %-15s | %-10s | %-6d\n", i, mapa[i].nome, mapa[i].cor, mapa[i].tropas);
     }
 }
 
 void exibirMissao(int missaoID) {
-    printf("\nSUA MISSAO: ");
-    if (missaoID == 0) printf("Dominar 3 territorios inimigos.\n");
-    else printf("Eliminar o exercito Vermelho.\n");
+    printf("\nSUA MISSÃO: ");
+    if (missaoID == 0) printf("Dominar o maior número de territórios.\n");
+    else printf("Eliminar a resistência inimiga.\n");
 }
 
-// DOCUMENTAÇÃO: Lógica de ataque modificando dados via ponteiros
-void simularAtaque(Territorio* origem, Territorio* destino) {
-    printf("\nAtaque: %s (%s) vs %s (%s)\n", origem->nome, origem->cor, destino->nome, destino->cor);
+// IMPLEMENTAÇÃO SOLICITADA: Lógica completa de ataque e troca de dono
+void atacar(Territorio* atacante, Territorio* defensor) {
+    printf("\n--- BATALHA: %s vs %s ---\n", atacante->nome, defensor->nome);
     
     int dadoAtaque = rand() % 6 + 1;
     int dadoDefesa = rand() % 6 + 1;
 
-    printf("Dados -> Ataque: %d | Defesa: %d\n", dadoAtaque, dadoDefesa);
+    printf("Dados -> Atacante: %d | Defensor: %d\n", dadoAtaque, dadoDefesa);
 
     if (dadoAtaque > dadoDefesa) {
-        printf("Vitoria do atacante! %s perdeu 1 tropa.\n", destino->nome);
-        destino->tropas--;
+        printf("VITÓRIA! O território %s foi conquistado!\n", defensor->nome);
+        
+        // REQUISITO: Atualização de dados (Mudar cor e transferir metade das tropas)
+        strcpy(defensor->cor, atacante->cor);
+        int transferidas = atacante->tropas / 2;
+        defensor->tropas = transferidas;
+        atacante->tropas -= transferidas;
+        
+        printf("Novos dados: %s agora é %s e possui %d tropas.\n", defensor->nome, defensor->cor, defensor->tropas);
     } else {
-        printf("Defesa segurou! %s perdeu 1 tropa.\n", origem->nome);
-        origem->tropas--;
+        printf("DERROTA! O defensor resistiu.\n");
+        // Se perder, o atacante perde uma tropa
+        if (atacante->tropas > 1) {
+            atacante->tropas--;
+        }
     }
 }
 
