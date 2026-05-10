@@ -1,170 +1,154 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <locale.h>
 
-// --- Constantes Globais ---
-#define MAX_NOME 30
+// --- Constantes ---
+#define MAX_ITENS 10
+#define TAM_NOME 30
+#define TAM_TIPO 20
 
-// --- Estrutura de Dados ---
+// --- Estrutura de Dados (Requisito: Criação da struct) ---
 typedef struct {
-    char nome[MAX_NOME];
-    char cor[20];
-    int tropas;
-} Territorio;
+    char nome[TAM_NOME];
+    char tipo[TAM_TIPO];
+    int quantidade;
+} Item;
 
 // --- Protótipos das Funções ---
-Territorio* alocarMapa(int total);
-void inicializarTerritorios(Territorio* mapa, int total);
-void exibirMapa(const Territorio* mapa, int total);
-void exibirMissao(int missaoID);
-// Alterado para void atacar conforme requisito
-void atacar(Territorio* atacante, Territorio* defensor);
-void limparBufferEntrada();
-void liberarMemoria(Territorio* mapa);
+void inserirItem(Item mochila[], int *total);
+void removerItem(Item mochila[], int *total);
+void listarItens(Item mochila[], int total);
+void buscarItem(Item mochila[], int total);
+void limparBuffer();
 
-// --- Função Principal ---
 int main() {
     setlocale(LC_ALL, "Portuguese");
-    srand(time(NULL)); 
-
-    int totalTerritorios;
-    printf("Quantos territórios deseja cadastrar no sistema? ");
-    scanf("%d", &totalTerritorios);
-    limparBufferEntrada();
-
-    // 1. Setup com Alocação Dinâmica baseada na escolha do usuário
-    Territorio* mapa = alocarMapa(totalTerritorios);
-    if (mapa == NULL) {
-        printf("Erro ao alocar memória!\n");
-        return 1;
-    }
     
-    inicializarTerritorios(mapa, totalTerritorios);
-    
-    int missaoID = rand() % 2; 
+    Item mochila[MAX_ITENS]; // Vetor de structs (Capacidade 10)
+    int totalItens = 0;      // Contador de itens atuais
     int opcao;
 
-    // 2. Game Loop
     do {
-        system("cls || clear"); 
-        printf("=== WAR ESTRUTURADO - MK GÊNIO ===\n");
-        exibirMissao(missaoID);
-        exibirMapa(mapa, totalTerritorios);
-
-        printf("\n1. Atacar\n2. Verificar Vitoria\n0. Sair\nEscolha: ");
+        printf("\n--- MENU DE INVENTÁRIO---");
+        printf("\n1. Cadastrar Item");
+        printf("\n2. Remover Item");
+        printf("\n3. Buscar Item");
+        printf("\n4. Listar Mochila");
+        printf("\n0. Sair");
+        printf("\nEscolha uma opção: ");
         scanf("%d", &opcao);
-        limparBufferEntrada();
+        limparBuffer();
 
-        switch(opcao) {
-            case 1: {
-                int idAtacante, idDefensor;
-                printf("\nDigite o ID do território ATACANTE (0 a %d): ", totalTerritorios - 1);
-                scanf("%d", &idAtacante);
-                printf("Digite o ID do território DEFENSOR (0 a %d): ", totalTerritorios - 1);
-                scanf("%d", &idDefensor);
-                limparBufferEntrada();
-
-                // Validação de segurança
-                if (idAtacante >= 0 && idAtacante < totalTerritorios && idDefensor >= 0 && idDefensor < totalTerritorios) {
-                    if (strcmp(mapa[idAtacante].cor, mapa[idDefensor].cor) == 0) {
-                        printf("\n[ERRO] Você não pode atacar seu próprio território!\n");
-                    } else if (mapa[idAtacante].tropas < 2) {
-                        printf("\n[ERRO] Tropas insuficientes para atacar (mínimo 2)!\n");
-                    } else {
-                        // REQUISITO: Uso de ponteiros para manipular os dados
-                        atacar(&mapa[idAtacante], &mapa[idDefensor]);
-                    }
-                } else {
-                    printf("\n[ERRO] IDs inválidos!\n");
-                }
+        switch (opcao) {
+            case 1:
+                inserirItem(mochila, &totalItens);
+                listarItens(mochila, totalItens);
                 break;
-            }
             case 2:
-                printf("\n[LOG] Analisando requisitos da missão...\n");
-                printf("Ainda há batalhas pela frente!\n");
+                removerItem(mochila, &totalItens);
+                listarItens(mochila, totalItens);
+                break;
+            case 3:
+                buscarItem(mochila, totalItens);
+                break;
+            case 4:
+                listarItens(mochila, totalItens);
                 break;
             case 0:
-                printf("Saindo...\n");
+                printf("Saindo do sistema de loot...\n");
                 break;
+            default:
+                printf("Opção inválida!\n");
         }
-        printf("\nPressione Enter para continuar...");
-        getchar();
-
     } while (opcao != 0);
 
-    // 3. Limpeza
-    liberarMemoria(mapa);
     return 0;
 }
 
 // --- Implementação das Funções ---
 
-// Agora recebe o tamanho informado pelo usuário
-Territorio* alocarMapa(int total) {
-    return (Territorio*) calloc(total, sizeof(Territorio));
+// Requisito: Cadastro de itens (até 10)
+void inserirItem(Item mochila[], int *total) {
+    if (*total >= MAX_ITENS) {
+        printf("\n[ERRO] Mochila cheia! Remova algo para abrir espaço.\n");
+        return;
+    }
+
+    printf("\nNome do item: ");
+    fgets(mochila[*total].nome, TAM_NOME, stdin);
+    mochila[*total].nome[strcspn(mochila[*total].nome, "\n")] = 0; // Remove o \n
+
+    printf("Tipo (arma/municao/cura): ");
+    fgets(mochila[*total].tipo, TAM_TIPO, stdin);
+    mochila[*total].tipo[strcspn(mochila[*total].tipo, "\n")] = 0;
+
+    printf("Quantidade: ");
+    scanf("%d", &mochila[*total].quantidade);
+    limparBuffer();
+
+    (*total)++;
+    printf("\n[SUCESSO] Item adicionado ao inventário!\n");
 }
 
-void inicializarTerritorios(Territorio* mapa, int total) {
-    // Nomes genéricos para suportar qualquer quantidade
+// Requisito: Listagem dos itens
+void listarItens(Item mochila[], int total) {
+    printf("\n--- CONTEÚDO DA MOCHILA (%d/%d) ---\n", total, MAX_ITENS);
+    if (total == 0) {
+        printf("A mochila está vazia.\n");
+        return;
+    }
+
+    printf("%-20s | %-15s | %-10s\n", "NOME", "TIPO", "QTD");
     for (int i = 0; i < total; i++) {
-        sprintf(mapa[i].nome, "Território %d", i + 1);
-        // Define duas cores básicas para permitir o ataque inicial
-        if (i % 2 == 0) strcpy(mapa[i].cor, "Verde");
-        else strcpy(mapa[i].cor, "Amarelo");
-        
-        mapa[i].tropas = rand() % 10 + 3; 
+        printf("%-20s | %-15s | %-10d\n", mochila[i].nome, mochila[i].tipo, mochila[i].quantidade);
     }
 }
 
-void exibirMapa(const Territorio* mapa, int total) {
-    printf("\nID | %-15s | %-10s | %-6s\n", "TERRITÓRIO", "COR", "TROPAS");
-    printf("----------------------------------------------\n");
+// Requisito: Busca sequencial por nome
+void buscarItem(Item mochila[], int total) {
+    char termo[TAM_NOME];
+    printf("\nDigite o nome do item para buscar: ");
+    fgets(termo, TAM_NOME, stdin);
+    termo[strcspn(termo, "\n")] = 0;
+
     for (int i = 0; i < total; i++) {
-        printf("%d  | %-15s | %-10s | %-6d\n", i, mapa[i].nome, mapa[i].cor, mapa[i].tropas);
-    }
-}
-
-void exibirMissao(int missaoID) {
-    printf("\nSUA MISSÃO: ");
-    if (missaoID == 0) printf("Dominar o maior número de territórios.\n");
-    else printf("Eliminar a resistência inimiga.\n");
-}
-
-// IMPLEMENTAÇÃO SOLICITADA: Lógica completa de ataque e troca de dono
-void atacar(Territorio* atacante, Territorio* defensor) {
-    printf("\n--- BATALHA: %s vs %s ---\n", atacante->nome, defensor->nome);
-    
-    int dadoAtaque = rand() % 6 + 1;
-    int dadoDefesa = rand() % 6 + 1;
-
-    printf("Dados -> Atacante: %d | Defensor: %d\n", dadoAtaque, dadoDefesa);
-
-    if (dadoAtaque > dadoDefesa) {
-        printf("VITÓRIA! O território %s foi conquistado!\n", defensor->nome);
-        
-        // REQUISITO: Atualização de dados (Mudar cor e transferir metade das tropas)
-        strcpy(defensor->cor, atacante->cor);
-        int transferidas = atacante->tropas / 2;
-        defensor->tropas = transferidas;
-        atacante->tropas -= transferidas;
-        
-        printf("Novos dados: %s agora é %s e possui %d tropas.\n", defensor->nome, defensor->cor, defensor->tropas);
-    } else {
-        printf("DERROTA! O defensor resistiu.\n");
-        // Se perder, o atacante perde uma tropa
-        if (atacante->tropas > 1) {
-            atacante->tropas--;
+        if (strcasecmp(mochila[i].nome, termo) == 0) {
+            printf("\n[ITEM ENCONTRADO]");
+            printf("\nNome: %s | Tipo: %s | Quantidade: %d\n", mochila[i].nome, mochila[i].tipo, mochila[i].quantidade);
+            return;
         }
     }
+    printf("\n[AVISO] Item '%s' não encontrado na mochila.\n", termo);
 }
 
-void limparBufferEntrada() {
+// Requisito: Remoção de itens (por nome)
+void removerItem(Item mochila[], int *total) {
+    if (*total == 0) {
+        printf("\n[ERRO] Nada para remover.\n");
+        return;
+    }
+
+    char termo[TAM_NOME];
+    printf("\nDigite o nome do item a ser excluído: ");
+    fgets(termo, TAM_NOME, stdin);
+    termo[strcspn(termo, "\n")] = 0;
+
+    for (int i = 0; i < *total; i++) {
+        if (strcasecmp(mochila[i].nome, termo) == 0) {
+            // Reorganiza o vetor (traz o último para a vaga do excluído ou desloca)
+            for (int j = i; j < (*total) - 1; j++) {
+                mochila[j] = mochila[j + 1];
+            }
+            (*total)--;
+            printf("\n[SUCESSO] Item removido.\n");
+            return;
+        }
+    }
+    printf("\n[ERRO] Item não localizado.\n");
+}
+
+void limparBuffer() {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
-}
-
-void liberarMemoria(Territorio* mapa) {
-    free(mapa);
 }
